@@ -46,10 +46,6 @@ async def restart_bluetooth():
 async def on_startup(app):
     await restart_bluetooth()
 
-renogy_class_registry = dict(
-    rover     = RoverClient
-)
-
 batmon_bms_registry = dict(
     daly      = bmslib.models.daly.DalyBt,
     jbd       = bmslib.models.jbd.JbdBt,
@@ -70,12 +66,17 @@ def enrich_data(data, request):
     data['device_type'] = device_type
     return data
 
+def make_renogy_data_received_callback(request):
+    def callback(client, data):
+        logging.info(f'returning {data.__class__.__name__}')
+        data_logger.log_mqtt(json_data=json.dumps(enrich_data(filter_data(data), request)))
+        client.device.disconnect()
+    return callback
+
 def renogy_on_connect_fail(self, error):
     self.__stop_service()
     if error != 'Disconnected':
-        logging.error(f"error: ~{error}~")
-        logging.error(f"diffr: ~{error != 'Disconnected'}~")
-        logging.error(f"Conn failed: {error}")
+        logging.error(f"Connection failed: {error}")
         restart_bluetooth()
 
 def renogy_stop_service(self):
@@ -85,22 +86,7 @@ def renogy_stop_service(self):
     self.manager.stop()
     # os._exit(os.EX_OK)
 
-def make_renogy_data_received_callback(request):
-    def callback(client, data):
-        logging.info(f'returning {data.__class__.__name__}')
-        data_logger.log_mqtt(json_data=json.dumps(enrich_data(filter_data(data), request)))
-        client.device.disconnect()
-    return callback
-
-
-
-# Prevent exiting by renogy BaseClient
-def patched_exit(code):
-    if code == os.EX_OK:
-        logging.info(f'preventing restart')
-        return True
-    else:
-        os._exit(code)
+RoverClient.__stop_service = renogy_stop_service
 
 async def batmon_fetch_bms_data(bms, request):
     data = {}
@@ -148,10 +134,7 @@ async def get_info(request):
                 renogy_config['remote_logging'] = {}
                 renogy_config['mqtt'] = {}
                 renogy_config['pvoutput'] = {}
-                renogy_class = renogy_class_registry.get('rover')
-                client = renogy_class(renogy_config, make_renogy_data_received_callback(request))
-                client.__on_connect_fail = renogy_on_connect_fail
-                client.__stop_service = renogy_stop_service
+                client = RoverClient(renogy_config, make_renogy_data_received_callback(request), renogy_on_connect_fail)
                 client.connect()
         elif adapter == 'batmon':
             bms_class = batmon_bms_registry.get(device_subtype)
