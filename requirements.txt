@@ -1,0 +1,11 @@
+aiohttp
+bleak==0.21.1
+paho-mqtt>=2.0.0
+backoff
+crcmod
+gatt
+configparser
+requests
+dbus-python
+pycairo 
+PyGObject
