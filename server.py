@@ -73,18 +73,19 @@ def make_renogy_data_received_callback(request):
         client.device.disconnect()
     return callback
 
-def renogy_on_connect_fail(self, error):
-    self.__stop_service()
-    if error != 'Disconnected':
-        logging.error(f"Connection failed: {error}")
-        restart_bluetooth()
-
 def renogy_stop_service(self):
     if self.poll_timer is not None and self.poll_timer.is_alive():
         self.poll_timer.cancel()
     if self.poll_timer is not None: self.read_timer.cancel()
     self.manager.stop()
     # os._exit(os.EX_OK)
+
+def renogy_on_connect_fail(self, error):
+    self.__stop_service()
+    if error != 'Disconnected':
+        logging.error(f"Connection failed: {error}")
+        renogy_stop_service(self)
+        os._exit(os.EX_OK)
 
 RoverClient.__stop_service = renogy_stop_service
 
