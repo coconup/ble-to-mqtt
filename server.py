@@ -3,7 +3,7 @@ import configparser
 import logging
 import json
 import sys
-import asyncio
+import time
 import math
 
 from aiohttp import web
@@ -36,15 +36,15 @@ mqtt_config['mqtt'] = {
 
 data_logger: DataLogger = DataLogger(mqtt_config)
 
-async def restart_bluetooth():
+def restart_bluetooth():
     logging.info('Restarting bluetooth')
     bmslib.bt.bt_power(False)
-    await asyncio.sleep(1)
+    time.sleep(1)
     bmslib.bt.bt_power(True)
-    await asyncio.sleep(2)
+    time.sleep(2)
 
 async def on_startup(app):
-    await restart_bluetooth()
+    restart_bluetooth()
 
 batmon_bms_registry = dict(
     daly      = bmslib.models.daly.DalyBt,
@@ -149,7 +149,7 @@ async def get_info(request):
                 await batmon_fetch_bms_data(bms, request)
             except Exception as e:
                 await bms.disconnect()
-                await restart_bluetooth()
+                restart_bluetooth()
 
         return web.json_response({"success": True})
     except Exception as e:
