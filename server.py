@@ -73,7 +73,7 @@ def make_renogy_data_received_callback(request):
         try:
             client.device.disconnect()
         except Exception as e:
-            renogy_on_connect_fail(client, e)
+            os._exit(os.EX_OK)
     return callback
 
 def renogy_stop_service(self):
