@@ -70,7 +70,10 @@ def make_renogy_data_received_callback(request):
     def callback(client, data):
         logging.info(f'returning {data.__class__.__name__}')
         data_logger.log_mqtt(json_data=json.dumps(enrich_data(filter_data(data), request)))
-        client.device.disconnect()
+        try:
+            client.device.disconnect()
+        except Exception as e:
+            renogy_on_connect_fail(client, e)
     return callback
 
 def renogy_stop_service(self):
